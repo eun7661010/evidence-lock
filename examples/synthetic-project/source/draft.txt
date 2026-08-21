@@ -1,0 +1,4 @@
+Synthetic release note draft
+
+The example package contains a small text report. It must describe the generated
+sample, list its two checks, and avoid network access.

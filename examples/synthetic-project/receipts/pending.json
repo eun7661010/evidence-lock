@@ -1,0 +1,36 @@
+{
+  "$schema": "https://raw.githubusercontent.com/eun7661010/evidence-lock/v0.1.0/src/evidence_lock/schemas/receipt-v1.schema.json",
+  "receipt_version": "evidence-lock/receipt/v1",
+  "created_at": "2026-01-01T00:00:00Z",
+  "snapshot_id": "sha256:397c85386ebab06ced612cb226e0a60f2a87b21d2548181d39747455ea0f04cd",
+  "evidence": {
+    "sources": [
+      {
+        "path": "source/draft.txt",
+        "kind": "file",
+        "sha256": "17bdfddb0df3e65ae1ced6e50f12e38922873e06d906b3fa3013a407d8fc0ee6",
+        "size": 166,
+        "files": 1
+      }
+    ],
+    "artifacts": [
+      {
+        "path": "artifact/report.txt",
+        "kind": "file",
+        "sha256": "8bacb96666ece62037f513aaa54138eb5066f293ddff399ecc244b1a06d2cf70",
+        "size": 172,
+        "files": 1
+      }
+    ],
+    "policies": [
+      {
+        "path": "policy/review-policy.json",
+        "kind": "file",
+        "sha256": "41e3323bffb773de07d6a726f8b413b56a7fa9e71228789f61b733357e32720e",
+        "size": 216,
+        "files": 1
+      }
+    ]
+  },
+  "review": null
+}

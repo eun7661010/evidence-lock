@@ -1,0 +1,23 @@
+evidence-lock
+Copyright 2026 evidence-lock contributors
+
+The runtime uses only the Python standard library.
+
+Development and verification dependencies are not redistributed by this
+project. Their licenses are available from their respective distributions:
+- build: MIT
+- Hatchling: MIT
+- jsonschema: MIT
+- mypy: MIT
+- pytest and pytest-cov: MIT
+- Ruff: MIT
+- Twine: Apache-2.0
+
+All example source, artifact, policy, receipts, terminal output, and diagrams
+were created specifically for this project. They contain no private project
+code, real review records, third-party document content, logos, fonts, personal
+data, credentials, or private absolute paths.
+
+CODE_OF_CONDUCT.md is adapted from Contributor Covenant 2.1, licensed under
+Creative Commons Attribution 4.0:
+https://www.contributor-covenant.org/version/2/1/code_of_conduct.html

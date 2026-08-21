@@ -1,0 +1,8 @@
+{
+  "policy_version": "synthetic-review/v1",
+  "requirements": [
+    "The report must describe the generated sample.",
+    "The report must list two checks.",
+    "The example must not require network access."
+  ]
+}

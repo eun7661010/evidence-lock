@@ -1,0 +1,122 @@
+# evidence-lock
+
+Purpose: Bind one explicit human or AI review decision to exact source, artifact,
+and policy file bytes. Recompute those hashes later and report stale when any
+captured evidence changes.
+
+Repository: https://github.com/eun7661010/evidence-lock
+License: Apache-2.0
+Language/runtime: Python 3.10-3.13; standard-library-only runtime
+Platforms tested: Windows, macOS, Ubuntu
+Network behavior: none
+Storage: local JSON files only
+
+## Use this project when
+
+- you need a portable review receipt for arbitrary files outside a Git workflow;
+- a human approval must become stale after source, output artifact, or policy bytes change;
+- an AI review result must be bound to the exact input, output, and evaluation policy it covered;
+- CI needs distinct approved, pending, rejected, stale, and invalid results;
+- receipts must omit personal absolute root paths.
+
+## Do not use this project as
+
+- a digital signature, reviewer authentication, trusted timestamp, transparency
+  log, chain of custody, or software supply-chain provenance system;
+- proof that a review occurred, that the reviewer label is truthful, or that an
+  approved artifact is correct or safe;
+- a command runner, test recorder, agent monitor, cloud evidence store, DVC
+  replacement, in-toto implementation, Sigstore replacement, or SLSA claim;
+- protection against an attacker who can rewrite both evidence and receipt files.
+
+## Commands
+
+Create a pending receipt from one or more paths in every group:
+
+    evidence-lock create \
+      --root PROJECT_ROOT \
+      --source RELATIVE_PATH \
+      --artifact RELATIVE_PATH \
+      --policy RELATIVE_PATH \
+      --output NEW_RECEIPT.json \
+      [--format human|json]
+
+Bind a fresh pending receipt to an explicit decision:
+
+    evidence-lock review PENDING.json \
+      --root PROJECT_ROOT \
+      --reviewer NON_PERSONAL_LABEL \
+      --reviewer-type human|ai \
+      --decision approved|rejected \
+      [--summary NON_SENSITIVE_TEXT] \
+      --output NEW_REVIEWED.json \
+      [--format human|json]
+
+Verify current bytes:
+
+    evidence-lock verify RECEIPT.json \
+      --root PROJECT_ROOT \
+      [--format human|json]
+
+Print or save the Draft 2020-12 receipt schema:
+
+    evidence-lock schema [--output NEW_SCHEMA.json]
+
+## Verification status and exit code
+
+- approved = 0: IDs are valid, all evidence matches, decision is approved.
+- pending = 3: evidence matches, no review exists.
+- rejected = 4: evidence matches, decision is rejected.
+- stale = 5: a captured file/directory is missing, unreadable, or different.
+- invalid = 6: JSON structure, schema identity, snapshot ID, or review ID is inconsistent.
+- command input/output error = 1; argument parser error = 2.
+
+Only approved returns zero from verify.
+
+## Receipt contract
+
+Schema version: evidence-lock/receipt/v1
+Schema file: src/evidence_lock/schemas/receipt-v1.schema.json
+
+Top-level fields:
+
+- $schema
+- receipt_version
+- created_at
+- snapshot_id
+- evidence.sources[]
+- evidence.artifacts[]
+- evidence.policies[]
+- review (null or reviewer/reviewer_type/decision/reviewed_at/summary/review_id)
+
+Each evidence item contains path, kind, sha256, size, and files. Paths are
+relative POSIX paths. The receipt never stores the absolute root. Directories
+hash a canonical manifest of regular-file relative paths, sizes, and SHA-256
+digests. Symlinks, absolute paths, parent traversal, unsupported special files,
+and case-insensitive path collisions are rejected.
+
+The snapshot_id binds schema URL, receipt version, created_at, and all three
+evidence groups. The review_id binds snapshot_id and every review field. These
+are unkeyed SHA-256 identifiers, not signatures.
+
+## Python API
+
+Public imports from evidence_lock:
+
+- create_receipt(root, sources=..., artifacts=..., policies=..., created_at=None)
+- apply_review(receipt, root, reviewer=..., reviewer_type=..., decision=...,
+  summary=None, reviewed_at=None)
+- verify_receipt(receipt, root) -> VerificationResult
+- load_receipt(path)
+- ReceiptError
+
+VerificationResult exposes status, ok, exit_code, snapshot_id, review_id,
+changes, errors, and to_dict().
+
+## Privacy rules for examples and issues
+
+Use synthetic files and non-personal reviewer labels such as reviewer-01 or
+synthetic-review-agent. Do not submit real approval packets, customer/student
+documents, private repository names, credentials, service IDs, personal paths,
+or confidential text. Reviewer and summary fields are plaintext and are not
+redacted automatically.

@@ -1,0 +1,33 @@
+name: Feature request
+description: Propose a focused improvement within the documented scope
+title: "Feature: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Describe the workflow pain point before proposing an interface.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Explain receipt, compatibility, privacy, and exit-code effects.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Note whether in-toto, Witness, Sigstore, DVC, BeforeDone, Agent Receipts, or Treeship already covers the need.
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Scope check
+      options:
+        - label: The proposal does not claim signatures or reviewer authentication without implementing them.
+          required: true
+        - label: Any examples will use synthetic, non-personal data.
+          required: true

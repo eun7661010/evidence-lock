@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a reproducible problem with synthetic data
+title: "Bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not attach real review packets, private documents, credentials, or personal paths. Use a newly written synthetic reproduction.
+  - type: input
+    id: version
+    attributes:
+      label: evidence-lock version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Operating system
+      options: [Windows, macOS, Linux, Other]
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: 3.13.0
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Synthetic reproduction
+      description: Include commands, minimal synthetic file structure, exit code, and output with private values removed.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed personal data, private paths, credentials, service IDs, and real review content.
+          required: true

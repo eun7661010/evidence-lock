@@ -1,0 +1,106 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "evidence-lock"
+version = "0.1.0"
+description = "Bind human or AI review decisions to exact source, artifact, and policy hashes, then detect stale approvals locally."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "evidence-lock contributors" }]
+keywords = [
+  "review receipt",
+  "stale approval",
+  "human in the loop",
+  "AI review",
+  "artifact integrity",
+  "policy hash",
+  "local first",
+  "CI gate",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: System :: Archiving",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2",
+  "jsonschema>=4.23",
+  "mypy>=1.15",
+  "pytest>=8.3",
+  "pytest-cov>=6",
+  "ruff>=0.11",
+  "twine>=6",
+]
+
+[project.scripts]
+evidence-lock = "evidence_lock.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/eun7661010/evidence-lock"
+Documentation = "https://github.com/eun7661010/evidence-lock#readme"
+Issues = "https://github.com/eun7661010/evidence-lock/issues"
+Changelog = "https://github.com/eun7661010/evidence-lock/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/evidence_lock"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/.github",
+  "/src",
+  "/tests",
+  "/examples",
+  "/docs",
+  "/tools",
+  "/README.md",
+  "/README.ko.md",
+  "/LICENSE",
+  "/NOTICE",
+  "/CHANGELOG.md",
+  "/CODE_OF_CONDUCT.md",
+  "/CONTRIBUTING.md",
+  "/SECURITY.md",
+  "/llms.txt",
+  "/pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers --strict-config"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["evidence_lock"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+packages = ["evidence_lock"]

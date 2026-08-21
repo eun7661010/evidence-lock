@@ -1,0 +1,7 @@
+Synthetic release report
+
+The generated sample is ready for review.
+
+Checks:
+1. The artifact contains only synthetic text.
+2. The workflow does not require network access.
