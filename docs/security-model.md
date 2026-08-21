@@ -34,6 +34,8 @@ If an attacker can rewrite the evidence and then generate a matching receipt and
 - Immediate self-staleness caused by writing a receipt into captured evidence.
 - Silent overwrite of an earlier receipt or schema output.
 - Cross-platform ambiguity caused by case-insensitive file-name collisions.
+- Partial directory snapshots caused by silently skipped unreadable subtrees.
+- Ambiguous receipts caused by duplicate JSON keys or overlapping evidence roles.
 
 ## Threats not addressed
 
@@ -53,7 +55,7 @@ Relative names can still disclose project structure, and free-text review fields
 
 ## Path handling
 
-Absolute Windows, UNC, and POSIX paths are rejected as evidence inputs. Parent traversal and NUL bytes are rejected. Symbolic links are rejected in the root path, named evidence path, and captured directory tree.
+Absolute Windows, UNC, and POSIX paths are rejected as evidence inputs. Backslashes, parent traversal, NUL bytes, and control whitespace are rejected. Symbolic links are rejected in the root path, named evidence path, and captured directory tree. Evidence entries must also be distinct and non-overlapping across source, artifact, and policy roles.
 
 The receipt output is not part of the receipt. The CLI prints only its file name. Errors are written to avoid including a resolved absolute path.
 

@@ -57,7 +57,7 @@ For a directory, the engine walks every regular file recursively and builds an i
 {"path":"relative/name.txt","sha256":"…","size":123}
 ```
 
-Entries are sorted by their POSIX relative path. The directory digest is SHA-256 over canonical JSON containing that ordered manifest. The manifest itself is not stored in the receipt, which keeps the public packet small and avoids exposing every nested name. Verification reports the top-level captured directory that changed.
+Entries are sorted by their POSIX relative path. The directory digest is SHA-256 over canonical JSON containing that ordered manifest. The manifest itself is not stored in the receipt, which keeps the public packet small and avoids exposing every nested name. Verification reports the top-level captured directory that changed. Directory traversal is fail-closed: an unreadable subtree or entry aborts capture instead of producing a partial manifest.
 
 The snapshot ignores empty directories, timestamps, permission bits, ownership, extended attributes, and platform-specific metadata. It rejects symbolic links, non-regular special files, and file names that collide after Unicode case folding.
 
@@ -67,7 +67,7 @@ The snapshot ignores empty directories, timestamps, permission bits, ownership, 
 
 `verify` applies checks in this order:
 
-1. Parse UTF-8 JSON.
+1. Parse UTF-8 JSON and reject duplicate object keys.
 2. Enforce the exact v1 object shape and field types.
 3. Recompute the snapshot ID and, when present, review ID.
 4. Resolve each stored relative path below the supplied root.
@@ -79,7 +79,9 @@ Structural inconsistency is `invalid`; a valid receipt whose external evidence c
 
 ## Path portability
 
-The root is operational context and is never serialized. Stored paths use `/` regardless of the current platform. Inputs with an absolute POSIX path, Windows drive or UNC path, NUL byte, or parent traversal are rejected.
+The root is operational context and is never serialized. Stored paths use `/` regardless of the current platform. Inputs with an absolute POSIX path, Windows drive or UNC path, backslash, NUL byte, control whitespace, or parent traversal are rejected.
+
+Each recorded evidence path must be unique and non-overlapping. For example, recording `source` and `source/draft.txt` in separate roles is rejected because the same bytes would otherwise have two ambiguous roles in one snapshot.
 
 The implementation rejects symbolic links in the root path and captured tree. This conservative rule avoids platform-dependent link semantics and prevents a relative-looking path from reading outside the declared root.
 

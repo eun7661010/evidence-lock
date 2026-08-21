@@ -59,8 +59,15 @@ def resolve_evidence_path(root: Path, raw: str) -> tuple[Path, str]:
 
     if not raw or "\x00" in raw:
         raise EvidencePathError("evidence paths must be non-empty and contain no NUL bytes")
-    if _looks_absolute(raw):
-        raise EvidencePathError("absolute evidence paths are not portable; use a relative path")
+    windows_path = PureWindowsPath(raw)
+    if (
+        _looks_absolute(raw)
+        or windows_path.drive
+        or windows_path.root
+        or "\\" in raw
+        or any(character in raw for character in "\r\n\t")
+    ):
+        raise EvidencePathError("evidence paths must use a portable relative POSIX form")
 
     root_path = Path(root)
     if _has_symlink_component(root_path):
@@ -102,16 +109,45 @@ def _directory_snapshot(path: Path) -> tuple[str, int, int]:
     manifest: list[dict[str, Any]] = []
     casefolded: dict[str, str] = {}
 
-    candidates = sorted(path.rglob("*"), key=lambda item: item.relative_to(path).as_posix())
+    candidates: list[Path] = []
+    pending = [path]
+    while pending:
+        directory = pending.pop()
+        try:
+            with os.scandir(directory) as iterator:
+                entries = sorted(iterator, key=lambda entry: entry.name)
+        except OSError as error:
+            relative = directory.relative_to(path).as_posix() or "."
+            raise EvidencePathError(
+                f"directory inside evidence is unreadable: {relative!r}"
+            ) from error
+
+        child_directories: list[Path] = []
+        for entry in entries:
+            candidate = Path(entry.path)
+            relative = candidate.relative_to(path).as_posix()
+            try:
+                if entry.is_symlink():
+                    raise EvidencePathError(
+                        f"symbolic links are not allowed inside evidence: {relative!r}"
+                    )
+                if entry.is_dir(follow_symlinks=False):
+                    child_directories.append(candidate)
+                elif entry.is_file(follow_symlinks=False):
+                    candidates.append(candidate)
+                else:
+                    raise EvidencePathError(
+                        f"unsupported filesystem entry inside evidence: {relative!r}"
+                    )
+            except OSError as error:
+                raise EvidencePathError(
+                    f"filesystem entry inside evidence is unreadable: {relative!r}"
+                ) from error
+        pending.extend(reversed(child_directories))
+
+    candidates.sort(key=lambda item: item.relative_to(path).as_posix())
     for candidate in candidates:
         relative = candidate.relative_to(path).as_posix()
-        if candidate.is_symlink():
-            raise EvidencePathError(f"symbolic links are not allowed inside evidence: {relative!r}")
-        if candidate.is_dir():
-            continue
-        if not candidate.is_file():
-            raise EvidencePathError(f"unsupported filesystem entry inside evidence: {relative!r}")
-
         folded = relative.casefold()
         previous = casefolded.get(folded)
         if previous is not None and previous != relative:

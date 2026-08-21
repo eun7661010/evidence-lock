@@ -110,7 +110,7 @@ To try an AI-labelled review, use `--reviewer-type ai`. That field records how t
 | `evidence-lock verify` | Recompute evidence and report `approved`, `pending`, `rejected`, `stale`, or `invalid` |
 | `evidence-lock schema` | Print or save the bundled Draft 2020-12 JSON Schema |
 
-All three evidence groups are required. Repeat `--source`, `--artifact`, or `--policy` to capture more than one path. A path may name a file or a directory. Directory hashes cover every regular file's relative name, content hash, and size in deterministic order.
+All three evidence groups are required. Repeat `--source`, `--artifact`, or `--policy` to capture more than one path. A path may name a file or a directory. Directory hashes cover every regular file's relative name, content hash, and size in deterministic order. An unreadable subtree fails the snapshot instead of being silently omitted.
 
 See [CLI and library reference](docs/cli-and-library.md) for complete arguments and Python examples.
 
@@ -139,7 +139,9 @@ Receipts are plain JSON. They can be committed beside a release candidate, archi
 ## Safety and privacy choices
 
 - Evidence paths must be relative to `--root`. Absolute paths and `..` traversal are rejected.
+- Evidence paths must be distinct and may not overlap as ancestor and descendant entries across roles.
 - Symbolic links are rejected so a snapshot cannot silently cross the declared root.
+- Receipt JSON rejects duplicate object keys, lone Unicode surrogates, and timestamps outside the supported RFC 3339 form.
 - Receipts store relative paths but never the root, home directory, command line, environment, file contents, or network location.
 - Output inside a captured directory is rejected because writing it would make the new receipt stale immediately.
 - Existing outputs are never overwritten.

@@ -252,6 +252,26 @@ def test_load_receipt_rejects_bad_json(project: Path) -> None:
         load_receipt(path)
 
 
+def test_load_receipt_rejects_duplicate_json_keys(project: Path) -> None:
+    receipt = make_receipt(project)
+    raw = '{"snapshot_id":"sha256:' + ("0" * 64) + '",' + json.dumps(receipt)[1:]
+    path = project / "duplicate.json"
+    path.write_text(raw, encoding="utf-8")
+
+    with pytest.raises(ReceiptError, match="Duplicate JSON key"):
+        load_receipt(path)
+
+
+def test_load_receipt_rejects_lone_surrogate_as_invalid_json(project: Path) -> None:
+    receipt = make_receipt(project)
+    raw = json.dumps(receipt).replace("source/draft.txt", r"\ud800")
+    path = project / "surrogate.json"
+    path.write_text(raw, encoding="utf-8")
+
+    with pytest.raises(ReceiptError, match="Unicode"):
+        load_receipt(path)
+
+
 def test_structural_type_tampering_is_invalid(project: Path) -> None:
     receipt = copy.deepcopy(make_receipt(project))
     receipt["evidence"]["sources"][0]["size"] = True  # type: ignore[index]
@@ -384,3 +404,33 @@ def test_duplicate_paths_in_loaded_receipt_are_invalid(project: Path) -> None:
     receipt["evidence"]["artifacts"][0]["path"] = "source/draft.txt"  # type: ignore[index]
     with pytest.raises(ReceiptError, match="unique"):
         validate_receipt(receipt)
+
+
+def test_ancestor_and_descendant_evidence_paths_cannot_overlap(project: Path) -> None:
+    with pytest.raises(ReceiptError, match="overlap"):
+        create_receipt(
+            project,
+            sources=["source"],
+            artifacts=["source/draft.txt"],
+            policies=["policy/review.json"],
+        )
+
+
+@pytest.mark.parametrize(
+    "timestamp",
+    [
+        "2026-01-01 00:00:00+00:00",
+        "20260101T000000+00:00",
+        "2026-W01-4T00:00:00+00:00",
+        "2026-01-01T00:00:00+00:00:30",
+    ],
+)
+def test_create_rejects_non_rfc3339_timestamps(project: Path, timestamp: str) -> None:
+    with pytest.raises(ReceiptError, match="RFC 3339"):
+        create_receipt(
+            project,
+            sources=["source/draft.txt"],
+            artifacts=["artifact/report.txt"],
+            policies=["policy/review.json"],
+            created_at=timestamp,
+        )

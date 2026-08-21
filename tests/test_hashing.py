@@ -94,6 +94,33 @@ def test_read_error_uses_only_relative_path(project: Path, monkeypatch: pytest.M
     assert str(project) not in str(caught.value)
 
 
+def test_unreadable_subdirectory_is_not_silently_omitted(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    secret = project / "source" / "secret"
+    secret.mkdir()
+    (secret / "hidden.txt").write_text("synthetic hidden\n", encoding="utf-8")
+    real_scandir = os.scandir
+
+    def guarded_scandir(path: str | os.PathLike[str]):
+        if Path(path) == secret:
+            raise PermissionError("synthetic unreadable directory")
+        return real_scandir(path)
+
+    monkeypatch.setattr(hashing.os, "scandir", guarded_scandir)
+
+    with pytest.raises(EvidencePathError, match="unreadable"):
+        capture_path(project, "source")
+
+
+@pytest.mark.skipif(os.sep == "\\", reason="backslash is not a legal filename on Windows")
+def test_capture_rejects_backslash_filename_that_receipt_cannot_validate(project: Path) -> None:
+    (project / "source" / "bad\\name.txt").write_text("synthetic\n", encoding="utf-8")
+
+    with pytest.raises(EvidencePathError, match="portable"):
+        capture_path(project, "source/bad\\name.txt")
+
+
 def test_rejects_symlink(project: Path) -> None:
     link = project / "source-link"
     try:

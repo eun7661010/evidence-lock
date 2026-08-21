@@ -7,7 +7,7 @@ import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from evidence_lock.hashing import (
@@ -25,6 +25,12 @@ SCHEMA_URL = (
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 IDENTIFIER_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
 CONTROL_PATTERN = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+RFC3339_PATTERN = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
+)
+RFC3339_WITHOUT_TIMEZONE_PATTERN = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$"
+)
 
 VERIFY_EXIT_CODES = {
     "approved": 0,
@@ -75,7 +81,9 @@ def _now() -> str:
 
 
 def _validate_timestamp(value: object, field: str) -> str:
-    if not isinstance(value, str):
+    if isinstance(value, str) and RFC3339_WITHOUT_TIMEZONE_PATTERN.fullmatch(value):
+        raise ReceiptError(f"{field} must include a timezone")
+    if not isinstance(value, str) or not RFC3339_PATTERN.fullmatch(value):
         raise ReceiptError(f"{field} must be an RFC 3339 timestamp")
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -93,6 +101,26 @@ def _validate_text(value: object, field: str, *, maximum: int, allow_empty: bool
         raise ReceiptError(f"{field} must be at most {maximum} characters")
     if CONTROL_PATTERN.search(value):
         raise ReceiptError(f"{field} contains a disallowed control character")
+    if any(0xD800 <= ord(character) <= 0xDFFF for character in value):
+        raise ReceiptError(f"{field} contains invalid Unicode surrogate code points")
+    return value
+
+
+def _overlapping_paths(paths: Sequence[str]) -> tuple[str, str] | None:
+    parsed = [(value, PurePosixPath(value)) for value in paths]
+    for index, (left_value, left) in enumerate(parsed):
+        for right_value, right in parsed[index + 1 :]:
+            if left in right.parents or right in left.parents:
+                return left_value, right_value
+    return None
+
+
+def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ReceiptError(f"Duplicate JSON key: {key!r}")
+        value[key] = item
     return value
 
 
@@ -151,6 +179,9 @@ def create_receipt(
     all_paths = [item["path"] for items in evidence.values() for item in items]
     if len(all_paths) != len(set(all_paths)):
         raise ReceiptError("the same evidence path cannot appear in more than one group")
+    overlap = _overlapping_paths(all_paths)
+    if overlap is not None:
+        raise ReceiptError(f"evidence paths must not overlap: {overlap[0]!r} and {overlap[1]!r}")
 
     receipt: dict[str, Any] = {
         "$schema": SCHEMA_URL,
@@ -161,7 +192,7 @@ def create_receipt(
         "review": None,
     }
     receipt["snapshot_id"] = _snapshot_id(receipt)
-    return receipt
+    return validate_receipt(receipt)
 
 
 def _validate_item(item: object, group: str) -> dict[str, Any]:
@@ -245,6 +276,9 @@ def validate_receipt(receipt: object) -> dict[str, Any]:
             paths.append(item["path"])
     if len(paths) != len(set(paths)):
         raise ReceiptError("evidence paths must be unique across all groups")
+    overlap = _overlapping_paths(paths)
+    if overlap is not None:
+        raise ReceiptError(f"evidence paths must not overlap: {overlap[0]!r} and {overlap[1]!r}")
     if receipt["snapshot_id"] != _snapshot_id(receipt):
         raise ReceiptError("snapshot_id does not match the receipt fields")
     _validate_review(receipt["review"], receipt["snapshot_id"])
@@ -256,7 +290,12 @@ def load_receipt(path: Path) -> dict[str, Any]:
 
     receipt_path = Path(path)
     try:
-        raw = json.loads(receipt_path.read_text(encoding="utf-8"))
+        raw = json.loads(
+            receipt_path.read_text(encoding="utf-8"),
+            object_pairs_hook=_unique_json_object,
+        )
+    except ReceiptError:
+        raise
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise ReceiptError(f"cannot read valid UTF-8 JSON from {receipt_path.name!r}") from error
     return validate_receipt(raw)
@@ -343,4 +382,4 @@ def apply_review(
     review["review_id"] = _review_id(validated["snapshot_id"], review)
     reviewed = dict(validated)
     reviewed["review"] = review
-    return reviewed
+    return validate_receipt(reviewed)

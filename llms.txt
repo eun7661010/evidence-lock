@@ -93,7 +93,9 @@ Each evidence item contains path, kind, sha256, size, and files. Paths are
 relative POSIX paths. The receipt never stores the absolute root. Directories
 hash a canonical manifest of regular-file relative paths, sizes, and SHA-256
 digests. Symlinks, absolute paths, parent traversal, unsupported special files,
-and case-insensitive path collisions are rejected.
+case-insensitive path collisions, overlapping evidence paths, and unreadable
+subtrees are rejected. Receipt parsing rejects duplicate JSON object keys,
+lone Unicode surrogates, and timestamps outside the supported RFC 3339 form.
 
 The snapshot_id binds schema URL, receipt version, created_at, and all three
 evidence groups. The review_id binds snapshot_id and every review field. These
