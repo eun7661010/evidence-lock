@@ -114,10 +114,13 @@ def test_rejects_symlink_in_root_path(project: Path) -> None:
         capture_path(root_link, "source/draft.txt")
 
 
-@pytest.mark.skipif(os.name == "nt", reason="Windows cannot create a portable case collision")
 def test_rejects_casefold_collision(project: Path) -> None:
-    (project / "source" / "A.txt").write_text("A", encoding="utf-8")
-    (project / "source" / "a.txt").write_text("a", encoding="utf-8")
+    upper = project / "source" / "A.txt"
+    lower = project / "source" / "a.txt"
+    upper.write_text("A", encoding="utf-8")
+    lower.write_text("a", encoding="utf-8")
+    if upper.samefile(lower):
+        pytest.skip("the current filesystem does not preserve this case collision")
     with pytest.raises(EvidencePathError, match="collision"):
         capture_path(project, "source")
 
